@@ -330,6 +330,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bandType: 3
   sensibility: 8
+  internalMode: 0
 --- !u!1 &2036529770
 GameObject:
   m_ObjectHideFlags: 0
