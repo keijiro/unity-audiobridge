@@ -21,7 +21,7 @@ public class AudioBridge : MonoBehaviour
         2048,
         2048,
         4096,
-        4096
+        8192
     };
     #endregion
     
@@ -71,7 +71,7 @@ public class AudioBridge : MonoBehaviour
 
         // Count the number of bands.
         var bandCount = 0;
-        while (shared.bandLevels[bandCount] >= 0.0f) {
+        while (shared.bandLevels[bandCount] <= 0.0f) {
             bandCount++;
         }
 
