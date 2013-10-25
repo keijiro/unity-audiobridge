@@ -18,7 +18,7 @@ public class SpectrumBar : MonoBehaviour
         var levels = useMeanLevel ? audioBridge.MeanLevels : audioBridge.Levels;
         if (index < levels.Length) {
             var vs = transform.localScale;
-            vs.y = levels[index] * 0.2f;
+            vs.y = 3.0f * (1.0f + levels[index] * 0.01f);
             transform.localScale = vs;
         }
     }
