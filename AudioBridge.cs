@@ -1,14 +1,13 @@
 ﻿// Unity Audio Bridge Plug-in / C# interface
 // By Keijiro Takahashi, 2013
 // https://github.com/keijiro/unity-audiobridge
-
 using UnityEngine;
 using System.Collections;
 using System.Runtime.InteropServices;
 
 public class AudioBridge : MonoBehaviour
 {
-    #region Band type definition
+    #region Octave band type definition
     public enum BandType
     {
         FourBand,
@@ -18,7 +17,7 @@ public class AudioBridge : MonoBehaviour
         TwentySixBand,
         ThirtyOneBand
     };
-
+    
     static int[] fftPointNumberForBands = {
         1024,
         1024,
@@ -27,7 +26,7 @@ public class AudioBridge : MonoBehaviour
         4096,
         8192
     };
-
+    
     static float[][] middleFrequenciesForBands = {
         new float[]{ 125.0f, 500, 1000, 2000 },
         new float[]{ 250.0f, 400, 600, 800 },
@@ -36,7 +35,7 @@ public class AudioBridge : MonoBehaviour
         new float[]{ 25.0f, 31.5f, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000 },
         new float[]{ 20.0f, 25, 31.5f, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000 },
     };
-
+    
     static float[] bandwidthForBands = {
         1.414f, // 2^(1/2)
         1.260f, // 2^(1/3)
@@ -46,7 +45,7 @@ public class AudioBridge : MonoBehaviour
         1.122f  // 2^(1/6)
     };
     #endregion
-    
+
     #region Public variables
     public BandType bandType = BandType.TenBand;
     public float sensibility = 8.0f;
@@ -58,10 +57,11 @@ public class AudioBridge : MonoBehaviour
     float[] meanLevels;
     #endregion
     
-    #region Public property
+    #region Public properties
     public float[] Levels {
         get { return levels; }
     }
+
     public float[] MeanLevels {
         get { return meanLevels; }
     }
@@ -78,8 +78,21 @@ public class AudioBridge : MonoBehaviour
             bandLevels;
     }
 
+#if UNITY_STANDALONE_OSX
     [DllImport ("UnityAudioBridgePlugin")]
     static extern int UnityAudioBridge_Update (ref SharedObject shared);
+#else
+    static int UnityAudioBridge_Update (ref SharedObject shared)
+    {
+        // Make dummy spectrum.
+        shared.bandLevels = new float[32];
+        var bandCount = middleFrequenciesForBands [shared.bandType].Length;
+        for (var i = 0; i < 32; i++) {
+            shared.bandLevels [i] = (i < bandCount) ? -100.0f : 1.0f;
+        }
+        return 0;
+    }
+#endif
 
     void UpdateWithNativePlugin ()
     {
@@ -126,29 +139,36 @@ public class AudioBridge : MonoBehaviour
     {
         var bandCount = middleFrequenciesForBands [(int)bandType].Length;
 
+        // Reallocate the buffers if it needs.
         if (levels == null || levels.Length != bandCount) {
             levels = new float[bandCount];
             meanLevels = new float[bandCount];
-            altSpectrum = new float[fftPointNumberForBands[(int)bandType]];
+            altSpectrum = new float[fftPointNumberForBands [(int)bandType]];
         }
 
+        // Do FFT.
         AudioListener.GetSpectrumData (altSpectrum, 0, FFTWindow.Blackman);
-        
+
+        // Convert the spectrum into octave bands.
         float[] middlefrequencies = middleFrequenciesForBands [(int)bandType];
         var bandwidth = bandwidthForBands [(int)bandType];
         var filter = Mathf.Exp (-sensibility * Time.deltaTime);
         
         for (var bi = 0; bi < levels.Length; bi++) {
+            // Specify the spectrum range of the band.
             int imin = FrequencyToSpectrumIndex (middlefrequencies [bi] / bandwidth);
             int imax = FrequencyToSpectrumIndex (middlefrequencies [bi] * bandwidth);
-            
+
+            // Specify the max level of the band.
             var bandMax = altSpectrum [imin];
             for (var fi = imin + 1; fi < imax; fi++) {
                 bandMax = Mathf.Max (bandMax, altSpectrum [fi]);
             }
-            
-            bandMax = 20.0f * Mathf.Log10(bandMax / 2.5f + 1.5849e-13f);
-            
+
+            // Convert amplitude to decibel.
+            bandMax = 20.0f * Mathf.Log10 (bandMax / 2.5f + 1.5849e-13f);
+
+            // Store the result.
             levels [bi] = bandMax;
             meanLevels [bi] = bandMax - (bandMax - meanLevels [bi]) * filter;
         }
@@ -159,7 +179,7 @@ public class AudioBridge : MonoBehaviour
     void Start ()
     {
         if (internalMode) {
-            UpdateWithInternalAudioSources();
+            UpdateWithInternalAudioSources ();
         } else {
             UpdateWithNativePlugin ();
         }
@@ -168,7 +188,7 @@ public class AudioBridge : MonoBehaviour
     void Update ()
     {
         if (internalMode) {
-            UpdateWithInternalAudioSources();
+            UpdateWithInternalAudioSources ();
         } else {
             UpdateWithNativePlugin ();
         }
