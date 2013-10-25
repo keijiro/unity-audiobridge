@@ -1,4 +1,8 @@
-﻿using UnityEngine;
+﻿// Unity Audio Bridge Plug-in / C# interface
+// By Keijiro Takahashi, 2013
+// https://github.com/keijiro/unity-audiobridge
+
+using UnityEngine;
 using System.Collections;
 using System.Runtime.InteropServices;
 
@@ -23,11 +27,30 @@ public class AudioBridge : MonoBehaviour
         4096,
         8192
     };
+
+    static float[][] middleFrequenciesForBands = {
+        new float[]{ 125.0f, 500, 1000, 2000 },
+        new float[]{ 250.0f, 400, 600, 800 },
+        new float[]{ 63.0f, 125, 500, 1000, 2000, 4000, 6000, 8000 },
+        new float[]{ 31.5f, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000 },
+        new float[]{ 25.0f, 31.5f, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000 },
+        new float[]{ 20.0f, 25, 31.5f, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000 },
+    };
+
+    static float[] bandwidthForBands = {
+        1.414f, // 2^(1/2)
+        1.260f, // 2^(1/3)
+        1.414f, // 2^(1/2)
+        1.414f, // 2^(1/2)
+        1.122f, // 2^(1/6)
+        1.122f  // 2^(1/6)
+    };
     #endregion
     
     #region Public variables
     public BandType bandType = BandType.TenBand;
     public float sensibility = 8.0f;
+    public bool internalMode = false;
     #endregion
     
     #region Private variables
@@ -39,20 +62,20 @@ public class AudioBridge : MonoBehaviour
     public float[] Levels {
         get { return levels; }
     }
-    
     public float[] MeanLevels {
         get { return meanLevels; }
     }
     #endregion
 
-    #region Interface for native plug-in
+    #region Interface for the native plug-in
     [StructLayout (LayoutKind.Sequential)]
     struct SharedObject
     {
         public int fftPointNumber;
         public int bandType;
         [MarshalAs (UnmanagedType.ByValArray, SizeConst=32)]
-        public float[] bandLevels;
+        public float[]
+            bandLevels;
     }
 
     [DllImport ("UnityAudioBridgePlugin")]
@@ -63,7 +86,7 @@ public class AudioBridge : MonoBehaviour
         SharedObject shared = new SharedObject ();
 
         // Set up the current configuration.
-        shared.fftPointNumber = fftPointNumberForBands[(int)bandType];
+        shared.fftPointNumber = fftPointNumberForBands [(int)bandType];
         shared.bandType = (int)bandType;
 
         // Run the native plug-in.
@@ -90,15 +113,65 @@ public class AudioBridge : MonoBehaviour
     }
     #endregion
 
+    #region Internal audio source mode
+    float[] altSpectrum;
+
+    int FrequencyToSpectrumIndex (float f)
+    {
+        var i = Mathf.FloorToInt (f / AudioSettings.outputSampleRate * 2.0f * altSpectrum.Length);
+        return Mathf.Clamp (i, 0, altSpectrum.Length - 1);
+    }
+
+    void UpdateWithInternalAudioSources ()
+    {
+        var bandCount = middleFrequenciesForBands [(int)bandType].Length;
+
+        if (levels == null || levels.Length != bandCount) {
+            levels = new float[bandCount];
+            meanLevels = new float[bandCount];
+            altSpectrum = new float[fftPointNumberForBands[(int)bandType]];
+        }
+
+        AudioListener.GetSpectrumData (altSpectrum, 0, FFTWindow.Blackman);
+        
+        float[] middlefrequencies = middleFrequenciesForBands [(int)bandType];
+        var bandwidth = bandwidthForBands [(int)bandType];
+        var filter = Mathf.Exp (-sensibility * Time.deltaTime);
+        
+        for (var bi = 0; bi < levels.Length; bi++) {
+            int imin = FrequencyToSpectrumIndex (middlefrequencies [bi] / bandwidth);
+            int imax = FrequencyToSpectrumIndex (middlefrequencies [bi] * bandwidth);
+            
+            var bandMax = altSpectrum [imin];
+            for (var fi = imin + 1; fi < imax; fi++) {
+                bandMax = Mathf.Max (bandMax, altSpectrum [fi]);
+            }
+            
+            bandMax = 20.0f * Mathf.Log10(bandMax / 2.5f + 1.5849e-13f);
+            
+            levels [bi] = bandMax;
+            meanLevels [bi] = bandMax - (bandMax - meanLevels [bi]) * filter;
+        }
+    }
+    #endregion
+
     #region MonoBehaviour functions
     void Start ()
     {
-        UpdateWithNativePlugin ();
+        if (internalMode) {
+            UpdateWithInternalAudioSources();
+        } else {
+            UpdateWithNativePlugin ();
+        }
     }
 
     void Update ()
     {
-        UpdateWithNativePlugin ();
+        if (internalMode) {
+            UpdateWithInternalAudioSources();
+        } else {
+            UpdateWithNativePlugin ();
+        }
     }
     #endregion
 }
