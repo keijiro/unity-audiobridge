@@ -18,3 +18,15 @@ There is a demo project in [the test branch]
 ![screenshot](http://keijiro.github.io/unity-audiobridge/screenshot.png)
 
 For the detailed usage, see this demo project.
+
+Usage
+-----
+
+1. Before launching Unity, select an audio interface for capturing signal
+   in the system sound preference.
+2. Import **UnityAudioBridgePlugin.bundle** into '**Plugins**' folder in
+   your project.
+3. Import **AudioBridge.cs**.
+4. Add **AudioBridge script** to a game object.
+
+You have to restart Unity to switch to another audio interface.
