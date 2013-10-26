@@ -1,8 +1,8 @@
 AudioBridge plug-in for Unity
 =============================
 
-**AudioBridge** is an external audio processing native plug-in for Unity.
-It analyze the external audio input and provides audio spectrum data for
+**AudioBridge** is an external audio processing plug-in for Unity.
+It analyzes the external audio input and provides audio spectrum data for
 Unity apps. It is highly optimized and uses low-latency audio APIs to process
 input. And therefore you can use this plug-in to make well-synchronized
 audio-visual apps.
