@@ -4,8 +4,8 @@ AudioBridge plug-in for Unity
 **AudioBridge** is an external audio processing plug-in for Unity.
 It analyzes the external audio input and provides audio spectrum data for
 Unity apps. It is highly optimized and uses low-latency audio APIs to process
-input. And therefore you can use this plug-in to make well-synchronized
-audio-visual apps.
+the audio input. And therefore you can use this plug-in to make
+well-synchronized audio-visual apps.
 
 At the moment AudioBridge only supports Mac OS X.
 
@@ -13,7 +13,7 @@ Demo
 ----
 
 There is a demo project in [the test branch]
-(https://github.com/keijiro/unity-audiobridge/tree/test) of this project.
+(https://github.com/keijiro/unity-audiobridge/tree/test) of the repository.
 
 ![screenshot](http://keijiro.github.io/unity-audiobridge/screenshot.png)
 
@@ -22,12 +22,12 @@ For the detailed usage, see this demo project.
 Usage
 -----
 
-1. Before launching Unity, select an audio interface for capturing signal
-   in the system sound preference.
+1. Before launching Unity, select an audio interface for capturing the
+   audio signals in the system sound preferences.
 2. Import **UnityAudioBridgePlugin.bundle** into '**Plugins**' folder in
    your project.
 3. Import **AudioBridge.cs**.
-4. Add **AudioBridge** script to a game object.
+4. Add the **AudioBridge** script component to a game object.
 
 You have to restart Unity to switch to another audio interface.
 
