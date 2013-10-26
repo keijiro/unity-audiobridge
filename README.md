@@ -38,10 +38,10 @@ There are three parameters in the AudioBridge script.
 - Internal Mode - analyzes the audio output from Unity instead of the
   external audio input.
 
-The analyzer puts the result into two arrays.
+The analyzer puts the result into two public properties.
 
-- float [] levels - The levels of each octave band.
-- float [] meanLevels - The mean level for a short period of time.
+- float [] Levels - The levels of each octave band.
+- float [] MeanLevels - The mean level for a short period of time.
   Use the *Sensibility* parameter to change the duration.
 
 Source code
